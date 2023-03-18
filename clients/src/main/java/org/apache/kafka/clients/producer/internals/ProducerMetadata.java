@@ -119,6 +119,8 @@ public class ProducerMetadata extends Metadata {
         time.waitObject(this, () -> {
             // Throw fatal exceptions, if there are any. Recoverable topic errors will be handled by the caller.
             maybeThrowFatalException();
+            // 只要判断version版本号还没有累加，就说明此时Sender线程关还没有成功的拉取元数据，
+            // 此时就是在主线程里，就是要wait阻塞等待最多60s即可。
             return updateVersion() > lastVersion || isClosed();
         }, deadlineMs);
 

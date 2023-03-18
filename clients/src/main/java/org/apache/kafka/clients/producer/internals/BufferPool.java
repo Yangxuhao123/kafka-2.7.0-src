@@ -121,22 +121,33 @@ public class BufferPool {
 
         try {
             // check if we have a free buffer of the right size pooled
+            // private final Deque<ByteBuffer> free;
+            // 如果free中不为空，说明还有多余的ByteBuffer可供分配
+            // 直接分配给线程
             if (size == poolableSize && !this.free.isEmpty())
                 return this.free.pollFirst();
 
             // now check if the request is immediately satisfiable with the
             // memory on hand or if we need to block
             int freeListSize = freeSize() * this.poolableSize;
+            // 非bufferpool中可以分配的内存 + bufferpool中空闲的bytebuffer大小 >= 消息的大小
             if (this.nonPooledAvailableMemory + freeListSize >= size) {
                 // we have enough unallocated or pooled memory to immediately
                 // satisfy the request, but need to allocate the buffer
+                // 如果bufferpool中没有现成的bytebuffer，就重新进行申请分配。
                 freeUp(size);
                 this.nonPooledAvailableMemory -= size;
             } else {
+                // 非bufferpool中可以分配的内存 + bufferpool中空闲的bytebuffer大小 < 消息的大小
                 // we are out of memory and will have to block
                 int accumulated = 0;
                 Condition moreMemory = this.lock.newCondition();
                 try {
+                    // 会阻塞一段时间，maxBlockMs - 可能获取元数据耗费的时间，
+                    // 如果还是不行的话，就会抛异常了，但是这段时间里有可用内存腾出来了。
+
+                    // 一些batch被发送出去了，获取到了响应，此时就可以释放那个batch底层对应的ByteBuffer，
+                    // 就会被放回到BufferPool里面去，此时就可以唤醒阻塞的线程，再次申请一个新的ByteBuffer构造一个Batch。
                     long remainingTimeToBlockNs = TimeUnit.MILLISECONDS.toNanos(maxTimeToBlockMs);
                     this.waiters.addLast(moreMemory);
                     // loop over and over until we have a buffer or have reserved

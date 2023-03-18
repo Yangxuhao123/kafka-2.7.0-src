@@ -134,6 +134,7 @@ public class Sender implements Runnable {
                   ApiVersions apiVersions) {
         this.log = logContext.logger(Sender.class);
         this.client = client;
+        // 内存缓冲
         this.accumulator = accumulator;
         this.metadata = metadata;
         this.guaranteeMessageOrder = guaranteeMessageOrder;
@@ -237,6 +238,7 @@ public class Sender implements Runnable {
         // main loop, runs until close is called
         while (running) {
             try {
+                // 核心程序
                 runOnce();
             } catch (Exception e) {
                 log.error("Uncaught error in kafka producer I/O thread: ", e);
@@ -322,6 +324,7 @@ public class Sender implements Runnable {
 
         long currentTimeMs = time.milliseconds();
         long pollTimeout = sendProducerData(currentTimeMs);
+        // 核心程序
         client.poll(pollTimeout, currentTimeMs);
     }
 
